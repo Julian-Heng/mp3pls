@@ -141,9 +141,9 @@ function process_files
 
             printf "%s\\r" "${display} ..."
             if ffmpeg -i "${file}" ${ffmpeg_flags} "${output_filename}"; then
-                printf "%s\\n" "[✔] ${display}"
+                printf "%s\\n" "[✔] ${display%.*}.mp3"
             else
-                printf "%s\\n" "[✗] ${display##*.}.mp3"
+                printf "%s\\n" "[✗] ${display%.*}.mp3"
             fi
         done
     )
