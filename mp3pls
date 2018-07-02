@@ -148,30 +148,7 @@ function process_files
         done
     )
 
-    #_process "${file_list[@]}"
-    split="$((${#file_list[@]} / 4))"
-    group_1=("${file_list[@]:0:${split}}")
-    a="$((a + split))"
-    group_2=("${file_list[@]:$a:$split}")
-    a="$((a + split))"
-    group_3=("${file_list[@]:$a:$split}")
-    a="$((a + split))"
-    group_4=("${file_list[@]:$a}")
-
-    #printf "%s\\n" "Group 1" "====================================="
-    #printf "%s\\n" "${group_1[@]}"
-    #printf "%s\\n" "Group 2" "====================================="
-    #printf "%s\\n" "${group_2[@]}"
-    #printf "%s\\n" "Group 3" "====================================="
-    #printf "%s\\n" "${group_3[@]}"
-    #printf "%s\\n" "Group 4" "====================================="
-    #printf "%s\\n" "${group_4[@]}"
-
-    _process "${group_1[@]}" &
-    _process "${group_2[@]}" &
-    _process "${group_3[@]}" &
-    _process "${group_4[@]}" &
-    wait
+    _process "${file_list[@]}"
 )
 
 function main
@@ -181,8 +158,7 @@ function main
     check_dirs
 
     get_file_list
-    printf "%s\\n" "${#file_list[@]}"
-    #process_files
+    process_files
 }
 
 main "$@"
