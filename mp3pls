@@ -1,0 +1,188 @@
+#!/usr/bin/env bash
+
+function get_full_path
+(
+    target="$1"
+
+    if [[ -f "${target}" ]]; then
+        filename="${target##*/}"
+        [[ "${filename}" == "${target}" ]] && \
+            target="./${target}"
+        target="${target%/*}"
+        cd "${target}" || exit
+        full_path="${PWD}"
+    elif [[ -d "${target}" ]]; then
+        cd "${target}" || exit
+        full_path="${PWD}"
+    fi
+
+    printf "%s" "${full_path}"
+)
+
+function check_app
+{
+    ((BASH_VERSINFO[0] < 4 || BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4)) && {
+        printf "%s\\n" "Bash 4.4+ required"
+        _exit="true"
+    }
+
+    app_list=("ffmpeg")
+
+    for i in "${app_list[@]}"; do
+        ! type -p ${i} > /dev/null && \
+            missing+=("${i}")
+    done
+
+    ((${#missing[@]} > 0)) && {
+        _exit="${exit:=true}"
+        for i in "${missing[@]}"; do
+            printf "%s\\n" "${i} is not installed"
+        done
+    }
+
+    [[ "${_exit}" == "true" ]] && {
+        printf "%s\\n" "Exiting..."
+        exit 1
+    }
+}
+
+function check_dirs
+{
+    if [[ ! "${output_dir}" ]]; then
+        input_dir="$(get_full_path "${input_dir%/}")"
+        output_dir="${PWD}/out"
+    else
+        input_dir="$(get_full_path "${input_dir%/}")"
+        output_dir="$(get_full_path "${output_dir%/}")"
+    fi
+
+    [[ ! -d "${input_dir}" ]] && {
+        print_usage
+        printf "%s\\n\\n" "\"${input_dir}\" is not a valid input directory"
+        exit 1
+    }
+
+    [[ ! -d "${output_dir}" ]] && {
+        printf "%s\\n" "\"${output_dir}\" is not a valid output directory"
+        printf "%s\\n" "Do you want to create it? [Y/n] "
+        read -r a
+        if [[ "${a}" =~ ^[Yy]$ ]]; then
+            mkdir -p "${output_dir}"
+        else
+            printf "%s\\n" "Exiting..."
+            exit 1
+        fi
+    }
+}
+
+function print_usage
+{
+    printf "%s\\n" "
+Usage:  ./mp3pls.sh --option --option VALUE
+
+    Options:
+
+    [-i|--input \"DIRECTORY\"]      Input path for files
+    [-o|--output \"DIRECTORY\"]     Output path for converted files
+    [-h|--help]                   Print this message
+"
+}
+
+function get_args
+{
+    [[ ! "$1" ]] && {
+        print_usage
+        printf "%s\\n\\n" "No arguments passed"
+        exit 1
+    }
+
+
+    while (($# > 0)); do
+        case "$1" in
+            "-i"|"--input")     input_dir="$2"; shift ;;
+            "-o"|"--output")    output_dir="$2"; shift ;;
+            "-ffmpeg-flags")    ffmpeg_flags="$2"; shift ;;
+            "-h"|"--help")      print_usage; exit 0 ;;
+        esac
+        shift
+    done
+}
+
+function get_file_list
+{
+    shopt -s globstar
+    for file in "${input_dir}"/**/*; do
+        [[ ! -d "${file}" ]] && {
+            local file_ext="${file##*.}"
+            [[ "${file_ext,,}" =~ ^(wav|flac)$ ]] && \
+                file_list+=("${file}")
+        }
+    done
+    shopt -u globstar
+}
+
+function process_files
+(
+    function _process
+    (
+        trap "exit 1" INT
+        ffmpeg_flags="${ffmpeg_flags:=-q:a 0 -loglevel fatal}"
+        for file in "$@"; do
+            source_dir="${file%/*}"
+            source_dir="${source_dir#${input_dir}}"
+            source_file="${file##*/}"
+            source_filename="${source_file%.*}"
+            output_source_dir="${output_dir}${source_dir}"
+            output_filename="${output_source_dir}/${source_filename}.mp3"
+            display="${file#${input_dir}}"
+            display="${display#/}"
+
+            mkdir -p "${output_source_dir}"
+
+            printf "%s\\r" "${display} ..."
+            if ffmpeg -i "${file}" ${ffmpeg_flags} "${output_filename}"; then
+                printf "%s\\n" "[✔] ${display}"
+            else
+                printf "%s\\n" "[✗] ${display##*.}.mp3"
+            fi
+        done
+    )
+
+    #_process "${file_list[@]}"
+    split="$((${#file_list[@]} / 4))"
+    group_1=("${file_list[@]:0:${split}}")
+    a="$((a + split))"
+    group_2=("${file_list[@]:$a:$split}")
+    a="$((a + split))"
+    group_3=("${file_list[@]:$a:$split}")
+    a="$((a + split))"
+    group_4=("${file_list[@]:$a}")
+
+    #printf "%s\\n" "Group 1" "====================================="
+    #printf "%s\\n" "${group_1[@]}"
+    #printf "%s\\n" "Group 2" "====================================="
+    #printf "%s\\n" "${group_2[@]}"
+    #printf "%s\\n" "Group 3" "====================================="
+    #printf "%s\\n" "${group_3[@]}"
+    #printf "%s\\n" "Group 4" "====================================="
+    #printf "%s\\n" "${group_4[@]}"
+
+    _process "${group_1[@]}" &
+    _process "${group_2[@]}" &
+    _process "${group_3[@]}" &
+    _process "${group_4[@]}" &
+    wait
+)
+
+function main
+{
+    get_args "$@"
+    check_app
+    check_dirs
+
+    get_file_list
+    printf "%s\\n" "${#file_list[@]}"
+    #process_files
+}
+
+main "$@"
