@@ -1,5 +1,28 @@
 #!/usr/bin/env bash
 
+function set_colors
+{
+    bold=$'\e[1m'
+    reset=$'\e[0m'
+    uline=$'\e[4m'
+
+    for i in {0..7}; do
+        f+=("$(printf "%b" "\\e[3${i}m")")
+        b+=("$(printf "%b" "\\e[4${i}m")")
+        fb+=("${f[$i]}${bold}")
+        bb+=("${b[$i]}${bold}")
+    done
+
+    tick="[${f[2]}✔${reset}]"
+    cross="[${f[1]}✗${reset}]"
+}
+
+function unset_colors
+{
+    unset bold reset uline
+    unset {f,b}{,b}
+}
+
 function get_full_path
 (
     target="$1"
@@ -82,9 +105,10 @@ Usage:  ./mp3pls.sh --option --option VALUE
 
     Options:
 
-    [-i|--input \"DIRECTORY\"]        Input path for files
-    [-o|--output \"DIRECTORY\"]       Output path for converted files
-    [--ffmpeg-flags \"FLAGS\"]        Set flags for ffmpeg
+    [-i|--input \"${uline}${bold}DIRECTORY${reset}\"]        Input path for files
+    [-o|--output \"${uline}${bold}DIRECTORY${reset}\"]       Output path for converted files
+    [--ffmpeg-flags \"${uline}${bold}FLAGS${reset}\"]        Set flags for ffmpeg
+    [--no-colors]                   Disable color output
     [-h|--help]                     Print this message
 "
 }
@@ -103,6 +127,7 @@ function get_args
             "-i"|"--input")     input_dir="$2"; shift ;;
             "-o"|"--output")    output_dir="$2"; shift ;;
             "--ffmpeg-flags")   ffmpeg_flags="$2"; shift ;;
+            "--no-colors")      unset_colors ;;
             "-h"|"--help")      print_usage; exit 0 ;;
         esac
         shift
@@ -142,9 +167,9 @@ function process_files
 
             printf "%s\\r" "${display} ..."
             if ffmpeg -i "${file}" ${ffmpeg_flags} "${output_filename}"; then
-                printf "%s\\n" "[✔] ${display%.*}.mp3"
+                printf "%s\\n" "${tick} ${display%.*}.mp3"
             else
-                printf "%s\\n" "[✗] ${display%.*}.mp3"
+                printf "%s\\n" "${cross} ${display%.*}.mp3"
             fi
         done
     )
@@ -171,6 +196,7 @@ function display_seconds
 
 function main
 {
+    set_colors
     get_args "$@"
     check_app
     check_dirs
