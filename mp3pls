@@ -129,6 +129,7 @@ function get_args
         case "$1" in
             "-i"|"--input")     input_dir="$2"; shift ;;
             "-o"|"--output")    output_dir="$2"; shift ;;
+            "-j"|"--parallel")  parallel="$2"; shift ;;
             "--ffmpeg-flags")   ffmpeg_flags="$2"; shift ;;
             "--no-colors")      unset_colors ;;
             "-h"|"--help")      print_usage; exit 0 ;;
@@ -177,7 +178,24 @@ function process_files
         done
     )
 
-    _process "${file_list[@]}"
+    if [[ "${parallel}" ]] && ((parallel != 1)); then
+        old_ifs="${IFS}"
+        split="$((${#file_list[@]} / ${parallel}))"
+        for ((i = 0; i < parallel - 1; i++)); do
+            IFS="," group[$i]="${file_list[*]:${a:-0}:${split}}"
+            ((a+=split))
+        done
+        IFS="," group["$((parallel - 1))"]="${file_list[*]:${a:-0}}"
+        IFS="${old_ifs}"
+
+        for ((i = 0; i < parallel; i++)); do
+            mapfile -d "," -t temp_arr < <(printf "%s" "${group[$i]}")
+            _process "${temp_arr[@]}" &
+        done
+        wait
+    else
+        _process "${file_list[@]}"
+    fi
 )
 
 function display_seconds
