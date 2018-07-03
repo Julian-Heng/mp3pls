@@ -130,6 +130,7 @@ function get_args
             "-i"|"--input")     input_dir="$2"; shift ;;
             "-o"|"--output")    output_dir="$2"; shift ;;
             "-j"|"--parallel")  parallel="$2"; shift ;;
+            "-q"|"--quiet")     [[ "${-}" != *"x"* ]] && exec > /dev/null 2>&1 ;;
             "--ffmpeg-flags")   ffmpeg_flags="$2"; shift ;;
             "--no-colors")      unset_colors ;;
             "-h"|"--help")      print_usage; exit 0 ;;
