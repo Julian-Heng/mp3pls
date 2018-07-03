@@ -152,6 +152,23 @@ function process_files
     _process "${file_list[@]}"
 )
 
+function display_seconds
+(
+    secs="${SECONDS}"
+    hours="$((secs / 60 / 60 % 24))"
+    mins="$((secs / 60 % 60))"
+    secs="$((secs - ((mins * 60) + (hours * 3600))))"
+
+    hours+="h "
+    mins+="m "
+    secs+="s"
+
+    ((${hours/h*} == 0)) && unset hours
+    ((${mins/m*} == 0)) && unset mins
+
+    printf "%s\\n" "Converted ${#file_list[@]} files in ${hours:-}${mins:-}${secs// }"
+)
+
 function main
 {
     get_args "$@"
@@ -160,6 +177,7 @@ function main
 
     get_file_list
     process_files
+    display_seconds
 }
 
 main "$@"
