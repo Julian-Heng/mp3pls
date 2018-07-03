@@ -21,6 +21,9 @@ function unset_colors
 {
     unset bold reset uline
     unset {f,b}{,b}
+
+    tick="[✔]"
+    cross="[✗]"
 }
 
 function get_full_path
