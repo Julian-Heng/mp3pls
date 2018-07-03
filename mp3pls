@@ -271,8 +271,11 @@ function main
 
     get_file_list
     merge_files
-    process_files
-    display_seconds
+    if process_files; then
+        display_seconds
+    else
+        printf "%s\\n" "" "Interrupted" "Exiting..." ""
+    fi
 }
 
 main "$@"
