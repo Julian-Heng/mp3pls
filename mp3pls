@@ -185,25 +185,30 @@ function get_file_list
     shopt -u globstar
 }
 
-function display_merge_progress
-{
-    str="(${count:=1}/${#incompatible[@]}) Merging files "
-    shopt -s checkwinsize; (:;:)
-    awk_script='BEGIN {printf "%0.0f", (a / b) * 100}'
-    percent="$(awk -v a="${count}" -v b="${#incompatible[@]}" "${awk_script}")"
-    cols="$((COLUMNS - (${#str} + 2)))"
-    bar_str="$(bar "${percent}" "${cols}")"
-    str+="${bar_str}"
-    ((count++))
-    printf "%s\\r" "${str}"
-}
-
 function merge_files
 (
+    function calc_percent
+    (
+        printf "%s" "$((200 * $1 / $2 % 2 + 100 * $1 / $2))"
+    )
+
+    function display_progress
+    {
+        str="(${count:=1}/${#incompatible[@]}) Merging files "
+        shopt -s checkwinsize; (:;:)
+        percent="$(calc_percent "${count}" "${#incompatible[@]}")"
+        cols="$((COLUMNS - (${#str} + 8)))"
+        bar_str="$(bar "${percent}" "${cols}")"
+        _percent="$(eval "printf \" %.0s\" {1..$((3 - ${#percent}))}")${percent}%"
+        str+="${bar_str} ${_percent}"
+        ((count++))
+        printf "%s\\r" "${str}"
+    }
+
     [[ "${merge}" != "true" ]] && return
 
     for file in "${incompatible[@]}"; do
-        display_merge_progress
+        display_progress
         source_dir="${file%/*}"
         source_dir="${source_dir#${input_dir}}"
         source_file="${file##*/}"
