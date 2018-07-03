@@ -157,7 +157,7 @@ function get_args
         case "$1" in
             "-i"|"--input")     input_dir="$2"; shift ;;
             "-o"|"--output")    output_dir="$2"; shift ;;
-            "-j"|"--parallel")  ((parallel > 0)) && parallel="$2"; shift ;;
+            "-j"|"--parallel")  (($2 > 0)) && parallel="$2"; shift ;;
             "-q"|"--quiet")     [[ "${-}" != *"x"* ]] && exec > /dev/null 2>&1 ;;
             "-w"|"--overwrite") overwrite="true" ;;
             "-m"|"--merge")     merge="true" ;;
