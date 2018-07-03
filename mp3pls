@@ -45,6 +45,14 @@ function get_full_path
     printf "%s" "${full_path}"
 )
 
+function bar
+(
+    ((elapsed = ($1 * $2 / 100)))
+    printf -v progress "%${elapsed}s"
+    printf -v total "%$(($2 - elapsed))s"
+    printf "%s" "[${progress// /\#}${total}]"
+)
+
 function check_app
 {
     ((BASH_VERSINFO[0] < 4 || BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4)) && {
@@ -177,13 +185,25 @@ function get_file_list
     shopt -u globstar
 }
 
+function display_merge_progress
+{
+    str="(${count:=1}/${#incompatible[@]}) Merging files "
+    shopt -s checkwinsize; (:;:)
+    awk_script='BEGIN {printf "%0.0f", (a / b) * 100}'
+    percent="$(awk -v a="${count}" -v b="${#incompatible[@]}" "${awk_script}")"
+    cols="$((COLUMNS - (${#str} + 2)))"
+    bar_str="$(bar "${percent}" "${cols}")"
+    str+="${bar_str}"
+    ((count++))
+    printf "%s\\r" "${str}"
+}
+
 function merge_files
 (
     [[ "${merge}" != "true" ]] && return
 
     for file in "${incompatible[@]}"; do
-        printf "%s\\r" "[${count:=1}/${#incompatible[@]}] Merging files"
-        ((count++))
+        display_merge_progress
         source_dir="${file%/*}"
         source_dir="${source_dir#${input_dir}}"
         source_file="${file##*/}"
