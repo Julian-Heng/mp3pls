@@ -74,11 +74,11 @@ function check_app
 
 function check_dirs
 {
+    input_dir="$(get_full_path "${input_dir%/}")"
+    output_dir_cache="${output_dir%/}"
     if [[ ! "${output_dir}" ]]; then
-        input_dir="$(get_full_path "${input_dir%/}")"
         output_dir="${PWD}/out"
     else
-        input_dir="$(get_full_path "${input_dir%/}")"
         output_dir="$(get_full_path "${output_dir%/}")"
     fi
 
@@ -89,11 +89,12 @@ function check_dirs
     }
 
     [[ ! -d "${output_dir}" ]] && {
-        printf "%s\\n" "\"${output_dir}\" is not a valid output directory"
-        printf "%s\\n" "Do you want to create it? [Y/n] "
+        printf "%s\\n" "\"${output_dir_cache}\" is not a valid output directory"
+        printf "%s\\n" "Do you want to create it? [${f[2]}Y${reset}/${f[1]}n${reset}] "
         read -r a
-        if [[ "${a}" =~ ^[Yy]$ ]]; then
-            mkdir -p "${output_dir}"
+        if [[ ! "${a}" || "${a}" =~ ^[Yy]$ ]]; then
+            mkdir -p "${output_dir_cache}"
+            output_dir="$(get_full_path "${output_dir_cache}")"
         else
             printf "%s\\n" "Exiting..."
             exit 1
@@ -193,7 +194,7 @@ function process_files
 
             mkdir -p "${output_source_dir}"
 
-            [[ "${overwrite}" == "true" ]] && \
+            [[ "${overwrite}" == "true" && -f "${output_filename}" ]] && \
                 rm "${output_filename}"
 
             printf "%s\\r" "${display}"
