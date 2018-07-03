@@ -168,7 +168,7 @@ function process_files
 
             mkdir -p "${output_source_dir}"
 
-            printf "%s\\r" "${display} ..."
+            printf "%s\\r" "${display}"
             if ffmpeg -i "${file}" ${ffmpeg_flags} "${output_filename}"; then
                 printf "%s\\n" "${tick} ${display%.*}.mp3"
             else
