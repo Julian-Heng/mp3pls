@@ -131,6 +131,7 @@ function get_args
             "-o"|"--output")    output_dir="$2"; shift ;;
             "-j"|"--parallel")  parallel="$2"; shift ;;
             "-q"|"--quiet")     [[ "${-}" != *"x"* ]] && exec > /dev/null 2>&1 ;;
+            "-w"|"--overwrite") overwrite="true" ;;
             "--ffmpeg-flags")   ffmpeg_flags="$2"; shift ;;
             "--no-colors")      unset_colors ;;
             "-h"|"--help")      print_usage; exit 0 ;;
@@ -169,6 +170,9 @@ function process_files
             display="${display#/}"
 
             mkdir -p "${output_source_dir}"
+
+            [[ "${overwrite}" == "true" ]] && \
+                rm "${output_filename}"
 
             printf "%s\\r" "${display}"
             if ffmpeg -i "${file}" ${ffmpeg_flags} "${output_filename}"; then
