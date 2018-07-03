@@ -132,6 +132,7 @@ function get_args
             "-j"|"--parallel")  parallel="$2"; shift ;;
             "-q"|"--quiet")     [[ "${-}" != *"x"* ]] && exec > /dev/null 2>&1 ;;
             "-w"|"--overwrite") overwrite="true" ;;
+            "-m"|"--merge")     merge="true" ;;
             "--ffmpeg-flags")   ffmpeg_flags="$2"; shift ;;
             "--no-colors")      unset_colors ;;
             "-h"|"--help")      print_usage; exit 0 ;;
@@ -146,12 +147,33 @@ function get_file_list
     for file in "${input_dir}"/**/*; do
         [[ ! -d "${file}" ]] && {
             local file_ext="${file##*.}"
-            [[ "${file_ext,,}" =~ ^(wav|flac)$ ]] && \
+            if [[ "${file_ext,,}" =~ ^(wav|flac)$ ]]; then
                 file_list+=("${file}")
+            elif [[ "${merge}" == "true" ]]; then
+                incompatible+=("${file}")
+            fi
         }
     done
     shopt -u globstar
 }
+
+function merge_files
+(
+    [[ "${merge}" != "true" ]] && return
+
+    for file in "${incompatible[@]}"; do
+        printf "%s\\r" "[${count:=1}/${#incompatible[@]}] Merging files"
+        ((count++))
+        source_dir="${file%/*}"
+        source_dir="${source_dir#${input_dir}}"
+        source_file="${file##*/}"
+        output_source_dir="${output_dir}${source_dir}"
+        output_filename="${output_source_dir}/${source_file}"
+        mkdir -p "${output_source_dir}"
+        cp "${file}" "${output_filename}"
+    done
+    printf "\\n"
+)
 
 function process_files
 (
@@ -228,6 +250,7 @@ function main
     check_dirs
 
     get_file_list
+    merge_files
     process_files
     display_seconds
 }
