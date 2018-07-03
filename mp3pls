@@ -82,9 +82,10 @@ Usage:  ./mp3pls.sh --option --option VALUE
 
     Options:
 
-    [-i|--input \"DIRECTORY\"]      Input path for files
-    [-o|--output \"DIRECTORY\"]     Output path for converted files
-    [-h|--help]                   Print this message
+    [-i|--input \"DIRECTORY\"]        Input path for files
+    [-o|--output \"DIRECTORY\"]       Output path for converted files
+    [--ffmpeg-flags \"FLAGS\"]        Set flags for ffmpeg
+    [-h|--help]                     Print this message
 "
 }
 
@@ -101,7 +102,7 @@ function get_args
         case "$1" in
             "-i"|"--input")     input_dir="$2"; shift ;;
             "-o"|"--output")    output_dir="$2"; shift ;;
-            "-ffmpeg-flags")    ffmpeg_flags="$2"; shift ;;
+            "--ffmpeg-flags")   ffmpeg_flags="$2"; shift ;;
             "-h"|"--help")      print_usage; exit 0 ;;
         esac
         shift
