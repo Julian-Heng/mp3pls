@@ -74,29 +74,40 @@ function check_app
 
 function check_dirs
 {
-    input_dir="$(get_full_path "${input_dir%/}")"
+    input_dir_cache="${input_dir%/}"
     output_dir_cache="${output_dir%/}"
+
+    input_dir="$(get_full_path "${input_dir_cache}")"
     if [[ ! "${output_dir}" ]]; then
         output_dir="${PWD}/out"
     else
-        output_dir="$(get_full_path "${output_dir%/}")"
+        output_dir="$(get_full_path "${output_dir_cache}")"
     fi
 
     [[ ! -d "${input_dir}" ]] && {
         print_usage
-        printf "%s\\n\\n" "\"${input_dir}\" is not a valid input directory"
+        if [[ ! "${input_dir}" ]]; then
+            printf "%s\\n" "Input directory does not exist"
+        else
+            printf "%s\\n" "\"${input_dir}\" is not a valid input directory"
+        fi
+        printf "%s\\n\\n" "Exiting..."
         exit 1
     }
 
     [[ ! -d "${output_dir}" ]] && {
-        printf "%s\\n" "\"${output_dir_cache}\" is not a valid output directory"
+        if [[ ! "${input_dir}" ]]; then
+            printf "%s\\n" "Output directory does not exist"
+        else
+            printf "%s\\n" "\"${output_dir}\" is not a valid output directory"
+        fi
         printf "%s\\n" "Do you want to create it? [${f[2]}Y${reset}/${f[1]}n${reset}] "
         read -r a
         if [[ ! "${a}" || "${a}" =~ ^[Yy]$ ]]; then
             mkdir -p "${output_dir_cache}"
             output_dir="$(get_full_path "${output_dir_cache}")"
         else
-            printf "%s\\n" "Exiting..."
+            printf "%s\\n\\n" "Exiting..."
             exit 1
         fi
     }
@@ -105,14 +116,22 @@ function check_dirs
 function print_usage
 {
     printf "%s\\n" "
-Usage:  ./mp3pls.sh --option --option VALUE
+Usage:  $0 --option --option \"${uline}${bold}VALUE${reset}\"
 
     Options:
 
     [-i|--input \"${uline}${bold}DIRECTORY${reset}\"]        Input path for files
     [-o|--output \"${uline}${bold}DIRECTORY${reset}\"]       Output path for converted files
-    [--ffmpeg-flags \"${uline}${bold}FLAGS${reset}\"]        Set flags for ffmpeg
+    [-j|--parallel \"${uline}${bold}INT${reset}\"]           Perform conversion in parallel
+    [-q|--quiet]                    Suppress all messages
+    [-w|--overwrite]                Overwrite converted files
+    [-m|--merge]                    Copy incompatible files to
+                                    the output directory
+
     [--no-colors]                   Disable color output
+    [--ffmpeg-flags \"${uline}${bold}FLAGS${reset}\"]        Set flags for ffmpeg 
+                                    DEFAULT: \"-q:a 0 -loglevel fatal\"
+
     [-h|--help]                     Print this message
 "
 }
@@ -130,13 +149,13 @@ function get_args
         case "$1" in
             "-i"|"--input")     input_dir="$2"; shift ;;
             "-o"|"--output")    output_dir="$2"; shift ;;
-            "-j"|"--parallel")  parallel="$2"; shift ;;
+            "-j"|"--parallel")  ((parallel > 0)) && parallel="$2"; shift ;;
             "-q"|"--quiet")     [[ "${-}" != *"x"* ]] && exec > /dev/null 2>&1 ;;
             "-w"|"--overwrite") overwrite="true" ;;
             "-m"|"--merge")     merge="true" ;;
+            "-h"|"--help")      print_usage; exit 0 ;;
             "--ffmpeg-flags")   ffmpeg_flags="$2"; shift ;;
             "--no-colors")      unset_colors ;;
-            "-h"|"--help")      print_usage; exit 0 ;;
         esac
         shift
     done
@@ -240,7 +259,7 @@ function display_seconds
     ((${hours/h*} == 0)) && unset hours
     ((${mins/m*} == 0)) && unset mins
 
-    printf "%s\\n" "Converted ${#file_list[@]} files in ${hours:-}${mins:-}${secs// }"
+    printf "%s\\n" "Converted ${#file_list[@]} files in ${hours:-}${mins:-}${secs}"
 )
 
 function main
