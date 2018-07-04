@@ -97,7 +97,7 @@ function check_dirs
         if [[ ! "${input_dir}" ]]; then
             printf "%s\\n" "Input directory does not exist"
         else
-            printf "%s\\n" "\"${input_dir}\" is not a valid input directory"
+            printf "%s\\n" "\"${input_dir:-${input_dir_cache}}\" is not a valid input directory"
         fi
         printf "%s\\n\\n" "Exiting..."
         exit 1
@@ -107,7 +107,7 @@ function check_dirs
         if [[ ! "${input_dir}" ]]; then
             printf "%s\\n" "Output directory does not exist"
         else
-            printf "%s\\n" "\"${output_dir}\" is not a valid output directory"
+            printf "%s\\n" "\"${output_dir:-${output_dir_cache}}\" is not a valid output directory"
         fi
         printf "%s\\n" "Do you want to create it? [${f[2]}Y${reset}/${f[1]}n${reset}] "
         read -r a
