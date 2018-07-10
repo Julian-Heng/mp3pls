@@ -222,7 +222,7 @@ function merge_files
         bar_str="$(bar "${percent}" "${cols}")"
         str+="${bar_str}$(printf "%5.5s" "${percent}%")"
         ((count++))
-        printf "%s\\r" "${str}"
+        printf "%s\\r\\e[2K" "${str}"
     }
 
     [[ "${merge}" != "true" ]] && return
