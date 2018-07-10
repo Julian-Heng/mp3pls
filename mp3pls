@@ -36,7 +36,7 @@ function get_full_path
             target="./${target}"
         target="${target%/*}"
         cd "${target}" || exit
-        full_path="${PWD}"
+        full_path="${PWD}/${filename}"
     elif [[ -d "${target}" ]]; then
         cd "${target}" || exit
         full_path="${PWD}"
