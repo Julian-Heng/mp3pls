@@ -46,14 +46,6 @@ function get_full_path
     printf "%s" "${full_path}"
 )
 
-function bar
-(
-    ((elapsed = ($1 * $2 / 100)))
-    printf -v progress "%${elapsed}s"
-    printf -v total "%$(($2 - elapsed))s"
-    printf "%s" "[${progress// /\#}${total}]"
-)
-
 function check_app
 {
     ((BASH_VERSINFO[0] < 4 || BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4)) && {
@@ -204,6 +196,14 @@ function process_filename
 
 function merge_files
 (
+    function bar
+    (
+        ((elapsed = ($1 * $2 / 100)))
+        printf -v progress "%${elapsed}s"
+        printf -v total "%$(($2 - elapsed))s"
+        printf "%s" "[${progress// /\#}${total}]"
+    )
+
     function calc_percent
     (
         printf "%s" "$((200 * $1 / $2 % 2 + 100 * $1 / $2))"
