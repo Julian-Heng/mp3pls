@@ -133,6 +133,7 @@ Usage:  $0 --option --option \"${uline}${bold}VALUE${reset}\"
     [-j|--parallel \"${uline}${bold}INT${reset}\"]           Perform conversion in parallel
     [-q|--quiet]                    Suppress all messages
     [-w|--overwrite]                Overwrite converted files
+    [-d|--dry]                      Don't convert any files
     [-m|--merge]                    Copy incompatible files to
                                     the output directory
 
@@ -152,7 +153,6 @@ function get_args
         exit 1
     }
 
-
     while (($# > 0)); do
         case "$1" in
             "-i"|"--input")     input_dir="$2"; shift ;;
@@ -160,6 +160,7 @@ function get_args
             "-j"|"--parallel")  (($2 > 0)) && parallel="$2"; shift ;;
             "-q"|"--quiet")     [[ "${-}" != *"x"* ]] && exec > /dev/null 2>&1 ;;
             "-w"|"--overwrite") overwrite="true" ;;
+            "-d"|"--dry")       dry="true" ;;
             "-m"|"--merge")     merge="true" ;;
             "-h"|"--help")      print_usage; exit 0 ;;
             "--ffmpeg-flags")   ffmpeg_flags="$2"; shift ;;
@@ -209,7 +210,12 @@ function merge_files
 
     function display_progress
     {
-        str="(${count:=1}/${#incompatible[@]}) Merging files "
+        if [[ "${dry}" != "true" ]]; then
+            str="(${count:=1}/${#incompatible[@]}) Merging files "
+        else
+            str="[dry] (${count:=1}/${#incompatible[@]}) Merging files "
+            (:;:);(:;:);(:;:);(:;:);(:;:)
+        fi
         shopt -s checkwinsize; (:;:)
         percent="$(calc_percent "${count}" "${#incompatible[@]}")"
         cols="$((COLUMNS - (${#str} + 8)))"
@@ -223,13 +229,15 @@ function merge_files
 
     for file in "${incompatible[@]}"; do
         display_progress
-        IFS="," \
-        read -r source_filename \
-                output_source_dir \
-                < <(process_filename "${file}")
-        output_filename="${output_source_dir}/${source_file}"
-        mkdir -p "${output_source_dir}"
-        cp "${file}" "${output_filename}"
+        [[ "${dry}" != "true" ]] && {
+            IFS="," \
+            read -r source_filename \
+                    output_source_dir \
+                    < <(process_filename "${file}")
+            output_filename="${output_source_dir}/${source_file}"
+            mkdir -p "${output_source_dir}"
+            cp "${file}" "${output_filename}"
+        }
     done
     printf "\\n"
 )
@@ -249,16 +257,21 @@ function process_files
             display="${file#${input_dir}}"
             display="${display#/}"
 
-            mkdir -p "${output_source_dir}"
+            if [[ "${dry}" != "true" ]]; then
+                mkdir -p "${output_source_dir}"
 
-            [[ "${overwrite}" == "true" && -f "${output_filename}" ]] && \
-                rm "${output_filename}"
+                [[ "${overwrite}" == "true" && -f "${output_filename}" ]] && \
+                    rm "${output_filename}"
 
-            printf "%s\\r" "${display}"
-            if ffmpeg -i "${file}" ${ffmpeg_flags} "${output_filename}"; then
-                printf "%s\\n" "${tick} ${display%.*}.mp3"
+                printf "%s\\r\\e[2K" "${display}"
+                if ffmpeg -i "${file}" ${ffmpeg_flags} "${output_filename}"; then
+                    printf "%s\\n" "${tick} ${display%.*}.mp3"
+                else
+                    printf "%s\\n" "${cross} ${display%.*}.mp3"
+                fi
             else
-                printf "%s\\n" "${cross} ${display%.*}.mp3"
+                printf "%s\\r\\e[2K" "[dry] ${display}"
+                printf "%s\\n" "[dry] ${display%.*}.mp3"
             fi
         done
     )
