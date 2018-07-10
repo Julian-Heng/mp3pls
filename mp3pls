@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=2030,2031,2086
 
 function set_colors
 {
@@ -63,7 +64,7 @@ function check_app
     app_list=("ffmpeg")
 
     for i in "${app_list[@]}"; do
-        ! type -p ${i} > /dev/null && \
+        ! type -p "${i}" > /dev/null && \
             missing+=("${i}")
     done
 
@@ -278,7 +279,7 @@ function process_files
 
     if [[ "${parallel}" ]] && ((parallel != 1)); then
         old_ifs="${IFS}"
-        split="$((${#file_list[@]} / ${parallel}))"
+        split="$((${#file_list[@]} / parallel))"
         for ((i = 0; i < parallel - 1; i++)); do
             IFS="," group[$i]="${file_list[*]:${a:-0}:${split}}"
             ((a+=split))
