@@ -54,16 +54,28 @@ function check_app
     }
 
     app_list=("ffmpeg")
+    app_optional=("cmp")
 
     for i in "${app_list[@]}"; do
         ! type -p "${i}" > /dev/null && \
             missing+=("${i}")
     done
 
+    for i in "${app_optional[@]}"; do
+        ! type -p "${i}" > /dev/null && \
+            missing_optional+=("${i}")
+    done
+
     ((${#missing[@]} > 0)) && {
         _exit="${exit:=true}"
         for i in "${missing[@]}"; do
-            printf "%s\\n" "${i} is not installed"
+            printf "%s\\n" "Dependency: ${i} is not installed"
+        done
+    }
+
+    ((${#missing_optional[@]} > 0)) && {
+        for i in "${missing_optional[@]}"; do
+            printf "%s\\n" "Optional: ${i} is not installed"
         done
     }
 
@@ -156,6 +168,8 @@ function get_args
             "-d"|"--dry")       dry="true" ;;
             "-m"|"--merge")     merge="true" ;;
             "-h"|"--help")      print_usage; exit 0 ;;
+            "--merge-only")     merge="true"; merge_only="true" ;;
+            "--skip-cmp")       skip_cmp="true" ;;
             "--ffmpeg-flags")   ffmpeg_flags="$2"; shift ;;
             "--no-colors")      unset_colors ;;
         esac
@@ -191,7 +205,10 @@ function process_filename
     display="${file#${input_dir}}"
     display="${display#/}"
 
-    printf "%s,%s" "${source_filename}" "${output_source_dir}"
+    printf "%s,%s,%s" \
+        "${source_file}" \
+        "${source_filename}" \
+        "${output_source_dir}"
 )
 
 function merge_files
@@ -211,19 +228,18 @@ function merge_files
 
     function display_progress
     {
-        if [[ "${dry}" != "true" ]]; then
-            str="(${count:=1}/${#incompatible[@]}) Merging files "
-        else
-            str="[dry] (${count:=1}/${#incompatible[@]}) Merging files "
+        str="(${count:=1}/${#incompatible[@]}) Merging files "
+        [[ "${dry}" == "true" ]] && {
+            str="[dry] ${str}"
             (:;:);(:;:);(:;:);(:;:);(:;:)
-        fi
+        }
         shopt -s checkwinsize; (:;:)
         percent="$(calc_percent "${count}" "${#incompatible[@]}")"
         cols="$((COLUMNS - (${#str} + 8)))"
         bar_str="$(bar "${percent}" "${cols}")"
         str+="${bar_str}$(printf "%5.5s" "${percent}%")"
         ((count++))
-        printf "%s\\r\\e[2K" "${str}"
+        printf "%s\\r" "${str}"
     }
 
     [[ "${merge}" != "true" ]] && return
@@ -232,12 +248,21 @@ function merge_files
         display_progress
         [[ "${dry}" != "true" ]] && {
             IFS="," \
-            read -r source_filename \
+            read -r source_file \
+                    _ \
                     output_source_dir \
                     < <(process_filename "${file}")
             output_filename="${output_source_dir}/${source_file}"
             mkdir -p "${output_source_dir}"
-            cp "${file}" "${output_filename}"
+
+            if [[ "${overwrite}" == "true" || \
+                  "${skip_cmp}"  == "true" || \
+                  "${missing_optional[*]}" =~ ^(cmp)$ ]]; then
+                cp "${file}" "${output_filename}"
+            else
+                ! cmp -s "${file}" "${output_filename}" && \
+                    cp "${file}" "${output_filename}"
+            fi
         }
     done
     printf "\\n"
@@ -251,7 +276,8 @@ function process_files
         ffmpeg_flags="${ffmpeg_flags:=-q:a 0 -loglevel fatal}"
         for file in "$@"; do
             IFS="," \
-            read -r source_filename \
+            read -r _ \
+                    source_filename \
                     output_source_dir \
                     < <(process_filename "${file}")
             output_filename="${output_source_dir}/${source_filename}.mp3"
@@ -276,6 +302,9 @@ function process_files
             fi
         done
     )
+
+    [[ "${merge_only}" == "true" ]] && \
+        return 0
 
     if [[ "${parallel}" ]] && ((parallel != 1)); then
         old_ifs="${IFS}"
