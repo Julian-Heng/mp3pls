@@ -185,6 +185,21 @@ function get_file_list
     shopt -u globstar
 }
 
+function process_filename
+(
+    file="$1"
+    source_dir="${file%/*}"
+    source_dir="${source_dir#${input_dir}}"
+    source_file="${file##*/}"
+    source_filename="${source_file%.*}"
+    output_source_dir="${output_dir}${source_dir}"
+    output_filename="${output_source_dir}/${source_filename}.mp3"
+    display="${file#${input_dir}}"
+    display="${display#/}"
+
+    printf "%s,%s" "${source_filename}" "${output_source_dir}"
+)
+
 function merge_files
 (
     function calc_percent
@@ -208,10 +223,10 @@ function merge_files
 
     for file in "${incompatible[@]}"; do
         display_progress
-        source_dir="${file%/*}"
-        source_dir="${source_dir#${input_dir}}"
-        source_file="${file##*/}"
-        output_source_dir="${output_dir}${source_dir}"
+        IFS="," \
+        read -r source_filename \
+                output_source_dir \
+                < <(process_filename "${file}")
         output_filename="${output_source_dir}/${source_file}"
         mkdir -p "${output_source_dir}"
         cp "${file}" "${output_filename}"
@@ -226,11 +241,10 @@ function process_files
         trap "exit 1" INT
         ffmpeg_flags="${ffmpeg_flags:=-q:a 0 -loglevel fatal}"
         for file in "$@"; do
-            source_dir="${file%/*}"
-            source_dir="${source_dir#${input_dir}}"
-            source_file="${file##*/}"
-            source_filename="${source_file%.*}"
-            output_source_dir="${output_dir}${source_dir}"
+            IFS="," \
+            read -r source_filename \
+                    output_source_dir \
+                    < <(process_filename "${file}")
             output_filename="${output_source_dir}/${source_filename}.mp3"
             display="${file#${input_dir}}"
             display="${display#/}"
