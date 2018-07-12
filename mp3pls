@@ -129,7 +129,7 @@ function check_dirs
 function print_usage
 {
     printf "%s\\n" "
-Usage:  $0 --option --option \"${uline}${bold}VALUE${reset}\"
+Usage: $0 --option --option \"${uline}${bold}VALUE${reset}\"
 
     Options:
 
