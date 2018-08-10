@@ -205,7 +205,7 @@ function process_filename
     display="${file#${input_dir}}"
     display="${display#/}"
 
-    printf "%s,%s,%s" \
+    printf "%s:%s:%s" \
         "${source_file}" \
         "${source_filename}" \
         "${output_source_dir}"
@@ -247,7 +247,7 @@ function merge_files
     for file in "${incompatible[@]}"; do
         display_progress
         [[ "${dry}" != "true" ]] && {
-            IFS="," \
+            IFS=":" \
             read -r source_file \
                     _ \
                     output_source_dir \
@@ -275,7 +275,7 @@ function process_files
         trap "exit 1" INT
         ffmpeg_flags="${ffmpeg_flags:=-q:a 0 -loglevel fatal}"
         for file in "$@"; do
-            IFS="," \
+            IFS=":" \
             read -r _ \
                     source_filename \
                     output_source_dir \
@@ -310,14 +310,14 @@ function process_files
         old_ifs="${IFS}"
         split="$((${#file_list[@]} / parallel))"
         for ((i = 0; i < parallel - 1; i++)); do
-            IFS="," group[$i]="${file_list[*]:${a:-0}:${split}}"
+            IFS=":" group[$i]="${file_list[*]:${a:-0}:${split}}"
             ((a+=split))
         done
-        IFS="," group["$((parallel - 1))"]="${file_list[*]:${a:-0}}"
+        IFS=":" group["$((parallel - 1))"]="${file_list[*]:${a:-0}}"
         IFS="${old_ifs}"
 
         for ((i = 0; i < parallel; i++)); do
-            mapfile -d "," -t temp_arr < <(printf "%s" "${group[$i]}")
+            mapfile -d ":" -t temp_arr < <(printf "%s" "${group[$i]}")
             _process "${temp_arr[@]}" &
         done
         wait
